@@ -1,4 +1,4 @@
-# location-not-found
+# 🌍 404 Location Not Found
 
 [![Release](https://img.shields.io/github/v/release/iamlucasvieira/location-not-found)](https://img.shields.io/github/v/release/iamlucasvieira/location-not-found)
 [![Build status](https://img.shields.io/github/actions/workflow/status/iamlucasvieira/location-not-found/main.yml?branch=main)](https://github.com/iamlucasvieira/location-not-found/actions/workflows/main.yml?query=branch%3Amain)
@@ -6,7 +6,32 @@
 [![Commit activity](https://img.shields.io/github/commit-activity/m/iamlucasvieira/location-not-found)](https://img.shields.io/github/commit-activity/m/iamlucasvieira/location-not-found)
 [![License](https://img.shields.io/github/license/iamlucasvieira/location-not-found)](https://img.shields.io/github/license/iamlucasvieira/location-not-found)
 
-geoguessr leaderboard
+**A comprehensive GeoGuessr leaderboard and analytics dashboard**
+
+Track player scores, visualize performance trends, and compete with friends in this feature-rich Streamlit dashboard powered by Google Sheets.
+
+## ✨ Features
+
+- 🏆 Real-time leaderboard with multiple ranking metrics
+- 📊 Interactive score distribution and analytics
+- 📈 Player performance trends over time
+- ⚔️ Head-to-head player comparisons
+- 🎯 Perfect game tracking
+- 💾 Smart caching for fast performance
+- 🔍 Date range filtering
+- 📱 Responsive design
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+uv sync
+
+# Run the dashboard
+streamlit run src/location_not_found/dashboard.py
+```
+
+For detailed setup instructions, see [DASHBOARD.md](DASHBOARD.md).
 
 - **Github repository**: <https://github.com/iamlucasvieira/location-not-found/>
 - **Documentation** <https://iamlucasvieira.github.io/location-not-found/>
