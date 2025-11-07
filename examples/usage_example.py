@@ -65,7 +65,7 @@ def main() -> None:
     recent = analyzer.get_recent_games(n=5)
     for _, game in recent.iterrows():
         indicator = "⭐" if game["score"] == 25000 else ""
-        print(f"{game['date'].strftime('%Y-%m-%d')} - {game['player']}: {game['score']:,} {indicator}")
+        print(f"{game['game_date'].strftime('%Y-%m-%d')} - {game['player']}: {game['score']:,} {indicator}")
 
 
 if __name__ == "__main__":

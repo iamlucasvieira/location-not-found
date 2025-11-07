@@ -170,10 +170,10 @@ def display_player_trends(analyzer: ScoreAnalyzer, df: pd.DataFrame) -> None:
         for player in selected_players:
             player_df = analyzer.get_player_history(player)
             if not player_df.empty:
-                player_df = player_df.sort_values("date")
+                player_df = player_df.sort_values("game_date")
                 fig.add_trace(
                     go.Scatter(
-                        x=player_df["date"],
+                        x=player_df["game_date"],
                         y=player_df["score"],
                         mode="lines+markers",
                         name=player,
@@ -186,7 +186,7 @@ def display_player_trends(analyzer: ScoreAnalyzer, df: pd.DataFrame) -> None:
 
         fig.update_layout(
             title="Score Trends Over Time",
-            xaxis_title="Date",
+            xaxis_title="Game Date",
             yaxis_title="Score",
             hovermode="x unified",
             legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
@@ -208,13 +208,15 @@ def display_recent_games(analyzer: ScoreAnalyzer) -> None:
 
     if not recent_df.empty:
         display_df = recent_df.copy()
-        display_df["date"] = display_df["date"].dt.strftime("%Y-%m-%d")
+        display_df["game_date"] = display_df["game_date"].dt.strftime("%Y-%m-%d")
         display_df["score"] = display_df["score"].apply(lambda x: f"{x:,}")
 
         # Add indicator for perfect scores
         display_df["indicator"] = display_df["score"].apply(lambda x: "⭐" if "25,000" in str(x) else "")
 
-        display_df = display_df.rename(columns={"player": "Player", "date": "Date", "score": "Score", "indicator": ""})
+        display_df = display_df.rename(
+            columns={"player": "Player", "game_date": "Date", "score": "Score", "indicator": ""}
+        )
 
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
@@ -291,8 +293,8 @@ def display_sidebar_filters(df: pd.DataFrame) -> tuple[date | None, date | None]
     use_date_filter = st.sidebar.checkbox("Filter by date range")
 
     if use_date_filter and not df.empty:
-        min_date = df["date"].min().date()
-        max_date = df["date"].max().date()
+        min_date = df["game_date"].min().date()
+        max_date = df["game_date"].max().date()
 
         col1, col2 = st.sidebar.columns(2)
 
@@ -359,7 +361,7 @@ def main() -> None:
 
         # Apply date filter if specified
         if start_date and end_date:
-            df = df[(df["date"].dt.date >= start_date) & (df["date"].dt.date <= end_date)]
+            df = df[(df["game_date"].dt.date >= start_date) & (df["game_date"].dt.date <= end_date)]
             if df.empty:
                 st.warning("No data found for the selected date range.")
                 return

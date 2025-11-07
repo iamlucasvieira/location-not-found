@@ -20,7 +20,7 @@ class ScoreAnalyzer:
         """
         self.df = df.copy()
         if not self.df.empty:
-            self.df["date"] = pd.to_datetime(self.df["date"])
+            self.df["game_date"] = pd.to_datetime(self.df["game_date"])
 
     def get_player_stats(self, player: str | None = None) -> list[PlayerStats]:
         """Calculate statistics for players.
@@ -88,8 +88,8 @@ class ScoreAnalyzer:
         if len(player_df) < 2:
             return 0.0
 
-        # Sort by date
-        sorted_df = player_df.sort_values("date", ascending=False)
+        # Sort by game_date
+        sorted_df = player_df.sort_values("game_date", ascending=False)
 
         # Take last 5 games
         recent_games = min(5, len(sorted_df))
@@ -163,9 +163,9 @@ class ScoreAnalyzer:
         df = self.df.copy()
 
         if start_date:
-            df = df[df["date"] >= pd.Timestamp(start_date)]
+            df = df[df["game_date"] >= pd.Timestamp(start_date)]
         if end_date:
-            df = df[df["date"] <= pd.Timestamp(end_date)]
+            df = df[df["game_date"] <= pd.Timestamp(end_date)]
 
         return df
 
@@ -181,7 +181,7 @@ class ScoreAnalyzer:
         if self.df.empty:
             return pd.DataFrame()
 
-        return self.df.nlargest(n, "date").reset_index(drop=True)
+        return self.df.nlargest(n, "game_date").reset_index(drop=True)
 
     def get_player_history(self, player: str) -> pd.DataFrame:
         """Get complete game history for a player.
@@ -190,13 +190,13 @@ class ScoreAnalyzer:
             player: Player name
 
         Returns:
-            DataFrame with player's games sorted by date
+            DataFrame with player's games sorted by game_date
         """
         if self.df.empty:
             return pd.DataFrame()
 
         player_df = self.df[self.df["player"] == player].copy()
-        return player_df.sort_values("date", ascending=False).reset_index(drop=True)
+        return player_df.sort_values("game_date", ascending=False).reset_index(drop=True)
 
     def get_time_series_data(self, player: str | None = None, resample: str = "D") -> pd.DataFrame:
         """Get time series data for score trends.
@@ -217,7 +217,7 @@ class ScoreAnalyzer:
             return pd.DataFrame()
 
         # Set date as index and resample
-        df = df.set_index("date").sort_index()
+        df = df.set_index("game_date").sort_index()
         resampled = df["score"].resample(resample).agg(["mean", "count", "max"])
         resampled = resampled.reset_index()
         resampled.columns = ["date", "average_score", "games_played", "best_score"]
@@ -272,7 +272,7 @@ class ScoreAnalyzer:
             "highest_score": int(self.df["score"].max()),
             "perfect_games": int((self.df["score"] == 25000).sum()),
             "date_range": {
-                "start": self.df["date"].min().date().isoformat(),
-                "end": self.df["date"].max().date().isoformat(),
+                "start": self.df["game_date"].min().date().isoformat(),
+                "end": self.df["game_date"].max().date().isoformat(),
             },
         }

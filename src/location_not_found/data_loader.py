@@ -70,9 +70,10 @@ class GoogleSheetsLoader:
                     row_dict = {k.lower().strip(): v for k, v in row.to_dict().items()}
 
                     # Map to expected field names
+                    # Note: Sheet uses "date" but we convert to "game_date" internally
                     game_data = {
                         "player": row_dict.get("player", ""),
-                        "date": row_dict.get("date", ""),
+                        "game_date": row_dict.get("date", "") or row_dict.get("game_date", ""),
                         "score": row_dict.get("score", 0),
                     }
 
@@ -127,12 +128,12 @@ class GoogleSheetsLoader:
             DataFrame with game scores
         """
         if not scores:
-            return pd.DataFrame(columns=["player", "date", "score"])
+            return pd.DataFrame(columns=["player", "game_date", "score"])
 
         data = [score.model_dump() for score in scores]
         df = pd.DataFrame(data)
-        df["date"] = pd.to_datetime(df["date"])
-        return df.sort_values("date", ascending=False).reset_index(drop=True)
+        df["game_date"] = pd.to_datetime(df["game_date"])
+        return df.sort_values("game_date", ascending=False).reset_index(drop=True)
 
 
 def load_config_from_secrets() -> DashboardConfig | None:
