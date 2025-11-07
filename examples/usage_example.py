@@ -10,9 +10,8 @@ def main() -> None:
     """Demonstrate programmatic usage of the library."""
     # Create configuration
     config = DashboardConfig(
-        spreadsheet_id="your_spreadsheet_id_here",
-        sheet_name="Sheet1",
-        credentials_path="credentials.json",
+        spreadsheet="your_spreadsheet_id_here",
+        worksheet="Sheet1",
         cache_ttl=300,
     )
 
@@ -76,5 +75,5 @@ if __name__ == "__main__":
         print(f"Error: {e}")
         print("\nMake sure to:")
         print("1. Update 'your_spreadsheet_id_here' with your actual spreadsheet ID")
-        print("2. Ensure credentials.json exists")
+        print("2. Configure Streamlit secrets with your Google Sheets credentials")
         print("3. Share the Google Sheet with your service account")

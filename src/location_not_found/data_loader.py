@@ -153,31 +153,9 @@ def load_config_from_secrets() -> DashboardConfig | None:
                 worksheet=gsheets_config.get("worksheet", "Sheet1"),
                 cache_ttl=gsheets_config.get("ttl", 300),
             )
-
-<<<<<<< HEAD
-        # Fallback to environment variables
-        load_dotenv()
-
-        spreadsheet_id = os.getenv("SPREADSHEET_ID", "")
-
-        def _raise_missing_id() -> NoReturn:
-            msg = "SPREADSHEET_ID not found in secrets or environment"
-            raise DataLoadError(msg)  # noqa: TRY301
-
-        if not spreadsheet_id:
-            _raise_missing_id()
-
-        return DashboardConfig(
-            spreadsheet_id=spreadsheet_id,
-            sheet_name=os.getenv("SHEET_NAME", "Sheet1"),
-            credentials_path=os.getenv("CREDENTIALS_PATH", "credentials.json"),
-            cache_ttl=int(os.getenv("CACHE_TTL", "300")),
-        )
-=======
-        # If no specific config, return None and let st.connection use default from secrets
-        return None
-
->>>>>>> c44de4d (Simplify Google Sheets integration using st.connection)
+        else:
+            # If no specific config, return None and let st.connection use default from secrets
+            return None
     except Exception as e:
         msg = f"Failed to load configuration from secrets: {e}"
         raise DataLoadError(msg) from e
