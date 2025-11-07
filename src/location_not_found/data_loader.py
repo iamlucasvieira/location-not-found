@@ -1,12 +1,14 @@
 """Google Sheets data loader with caching functionality."""
 
 import logging
+import os
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, NoReturn
 
 import gspread
 import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from pydantic import ValidationError
 
@@ -122,8 +124,8 @@ class GoogleSheetsLoader:
             if errors and len(errors) < 10:  # Only show errors if not too many
                 for row_num, error in errors:
                     st.warning(f"Row {row_num}: {error}")
-            else:
-                return validated_scores
+
+            return validated_scores  # noqa: TRY300
 
         except gspread.SpreadsheetNotFound:
             msg = f"Spreadsheet not found: {_self.config.spreadsheet_id}"
@@ -190,15 +192,11 @@ def load_config_from_env() -> DashboardConfig:
             )
 
         # Fallback to environment variables
-        import os
-
-        from dotenv import load_dotenv
-
         load_dotenv()
 
-        spreadsheet_id = os.getenv("SPREADSHEET_ID")
+        spreadsheet_id = os.getenv("SPREADSHEET_ID", "")
 
-        def _raise_missing_id() -> None:
+        def _raise_missing_id() -> NoReturn:
             msg = "SPREADSHEET_ID not found in secrets or environment"
             raise DataLoadError(msg)  # noqa: TRY301
 

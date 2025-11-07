@@ -57,7 +57,7 @@ def main() -> None:
     print("\n=== Top 5 Leaderboard ===")
     leaderboard = analyzer.get_leaderboard(n=5, metric="average_score")
     for idx, row in leaderboard.iterrows():
-        rank = idx + 1
+        rank = int(idx) + 1
         medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, f"{rank}.")
         print(f"{medal} {row['player']}: {row['average_score']:.0f} avg ({row['total_games']} games)")
 
