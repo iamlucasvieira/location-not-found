@@ -10,7 +10,7 @@ class GameScore(BaseModel):
     """Model representing a single game score entry."""
 
     player: str = Field(..., description="Player name", min_length=1)
-    date: date = Field(..., description="Date of the game")
+    game_date: date = Field(..., description="Date of the game")
     score: int = Field(..., description="Score achieved", ge=0, le=25000)
 
     @field_validator("player")
@@ -19,7 +19,7 @@ class GameScore(BaseModel):
         """Normalize player name by stripping whitespace and title-casing."""
         return v.strip().title()
 
-    @field_validator("date", mode="before")
+    @field_validator("game_date", mode="before")
     @classmethod
     def parse_date(cls, v: Any) -> date:
         """Parse date from various formats."""

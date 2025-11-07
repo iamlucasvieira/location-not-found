@@ -60,10 +60,10 @@ def load_sample_data_to_sheet(
 
     print(f"\n✅ Successfully loaded {len(data) - 1} rows of sample data!")
     print(f"📊 Spreadsheet URL: {spreadsheet.url}")
-    print(f"\n💡 Next steps:")
+    print("\n💡 Next steps:")
     print(f"1. Copy the spreadsheet ID: {spreadsheet.id}")
-    print(f"2. Add it to your .streamlit/secrets.toml or .env file")
-    print(f"3. Run the dashboard: streamlit run src/location_not_found/dashboard.py")
+    print("2. Add it to your .streamlit/secrets.toml or .env file")
+    print("3. Run the dashboard: streamlit run src/location_not_found/dashboard.py")
 
 
 if __name__ == "__main__":

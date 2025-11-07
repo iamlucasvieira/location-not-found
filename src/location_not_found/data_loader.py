@@ -122,8 +122,8 @@ class GoogleSheetsLoader:
             if errors and len(errors) < 10:  # Only show errors if not too many
                 for row_num, error in errors:
                     st.warning(f"Row {row_num}: {error}")
-
-            return validated_scores
+            else:
+                return validated_scores
 
         except gspread.SpreadsheetNotFound:
             msg = f"Spreadsheet not found: {_self.config.spreadsheet_id}"
@@ -197,9 +197,13 @@ def load_config_from_env() -> DashboardConfig:
         load_dotenv()
 
         spreadsheet_id = os.getenv("SPREADSHEET_ID")
-        if not spreadsheet_id:
+
+        def _raise_missing_id() -> None:
             msg = "SPREADSHEET_ID not found in secrets or environment"
-            raise DataLoadError(msg)
+            raise DataLoadError(msg)  # noqa: TRY301
+
+        if not spreadsheet_id:
+            _raise_missing_id()
 
         return DashboardConfig(
             spreadsheet_id=spreadsheet_id,

@@ -308,7 +308,7 @@ def display_sidebar_filters(df: pd.DataFrame) -> tuple[date | None, date | None]
 
 def display_sidebar_info() -> None:
     """Display sidebar information."""
-    st.sidebar.header("ℹ️ About")
+    st.sidebar.header("\u2139\ufe0f About")
     st.sidebar.markdown(
         """
         **404 Location Not Found** is a GeoGuessr leaderboard
