@@ -86,11 +86,11 @@ class GoogleSheetsLoader:
                 validated_scores.append(score)
             except ValidationError as e:
                 error_msg = _self._format_validation_error(e)
-                errors.append((idx + 2, error_msg))  # +2 because pandas is 0-indexed and row 1 is header
-                logger.warning(f"Row {idx + 2} validation failed: {error_msg}")
+                errors.append((int(idx) + 2, error_msg))  # +2 because pandas is 0-indexed and row 1 is header
+                logger.warning(f"Row {int(idx) + 2} validation failed: {error_msg}")
             except Exception as e:
-                errors.append((idx + 2, str(e)))
-                logger.warning(f"Row {idx + 2} processing failed: {e}")
+                errors.append((int(idx) + 2, str(e)))
+                logger.warning(f"Row {int(idx) + 2} processing failed: {e}")
 
         # Log summary
         logger.info(f"Loaded {len(validated_scores)} valid records, {len(errors)} errors")
