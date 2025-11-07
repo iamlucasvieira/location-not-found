@@ -63,9 +63,8 @@ class PlayerStats(BaseModel):
 class DashboardConfig(BaseModel):
     """Model for dashboard configuration."""
 
-    spreadsheet_id: str = Field(..., description="Google Sheets spreadsheet ID")
-    sheet_name: str = Field(default="Sheet1", description="Name of the sheet to read from")
-    credentials_path: str = Field(default="credentials.json", description="Path to Google service account credentials")
+    spreadsheet: str = Field(..., description="Google Sheets URL or spreadsheet name")
+    worksheet: str = Field(default="Sheet1", description="Name of the worksheet/tab to read from")
     cache_ttl: int = Field(default=300, description="Cache time-to-live in seconds", ge=0)
     max_score: int = Field(default=25000, description="Maximum possible score", ge=1)
 

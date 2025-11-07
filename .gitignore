@@ -212,8 +212,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
-# Google Sheets Credentials
-credentials.json
-service_account.json
-*-credentials.json

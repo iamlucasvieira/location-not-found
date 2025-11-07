@@ -17,8 +17,7 @@ A comprehensive GeoGuessr leaderboard dashboard built with Streamlit, featuring 
 ### 1. Prerequisites
 
 - Python 3.9+
-- Google account with access to Google Sheets
-- Service account credentials for Google Sheets API
+- A Google Sheet with your game data
 
 ### 2. Installation
 
@@ -28,36 +27,17 @@ Install the package with dependencies:
 uv sync
 ```
 
-Or install manually:
+Or with pip:
 
 ```bash
 pip install -e .
 ```
 
-### 3. Google Sheets Setup
+### 3. Google Sheets Setup (Easy!)
 
-#### Create a Service Account
+#### Step 1: Prepare Your Google Sheet
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable **Google Sheets API** and **Google Drive API**
-4. Create a service account:
-   - Navigate to "IAM & Admin" → "Service Accounts"
-   - Click "Create Service Account"
-   - Give it a name (e.g., "streamlit-dashboard")
-   - Click "Create and Continue"
-   - Grant role: "Editor" (or more restrictive if preferred)
-   - Click "Done"
-5. Create and download credentials:
-   - Click on the created service account
-   - Go to "Keys" tab
-   - Click "Add Key" → "Create New Key"
-   - Choose JSON format
-   - Save the file as `credentials.json` in the project root
-
-#### Prepare Your Google Sheet
-
-1. Create a Google Sheet with the following structure:
+Create a Google Sheet with the following structure:
 
 | player | date       | score |
 |--------|------------|-------|
@@ -65,36 +45,40 @@ pip install -e .
 | Bob    | 2024-01-15 | 18900 |
 | Alice  | 2024-01-16 | 23100 |
 
-2. Share the sheet with your service account email (found in `credentials.json` as `client_email`)
-   - Grant "Viewer" or "Editor" access
+**Column Requirements:**
+- `player`: Player name (text)
+- `date`: Game date (formats: YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY)
+- `score`: Score from 0 to 25,000 (number)
+
+#### Step 2: Enable Link Sharing
+
+1. Click the **Share** button in your Google Sheet
+2. Change access to **"Anyone with the link"** → **"Viewer"**
+3. Click **Copy link**
+
+That's it! No service accounts, no JSON credentials needed! 🎉
 
 ### 4. Configuration
 
-#### Option A: Using Streamlit Secrets (Recommended for Production)
-
-Create `.streamlit/secrets.toml`:
+Create `.streamlit/secrets.toml` in your project root:
 
 ```toml
+[connections.gsheets]
+spreadsheet = "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=0"
+type = "gsheets"
+
+# Optional settings
 [gsheets]
-spreadsheet_id = "your_spreadsheet_id_here"
-sheet_name = "Sheet1"
-credentials_path = "credentials.json"
-cache_ttl = 300
+worksheet = "Sheet1"
+ttl = 300
 ```
 
-#### Option B: Using Environment Variables (Local Development)
-
-Create `.env`:
+**Note:** Replace the URL with your Google Sheet's link. You can use the example file as a template:
 
 ```bash
-SPREADSHEET_ID=your_spreadsheet_id_here
-SHEET_NAME=Sheet1
-CREDENTIALS_PATH=credentials.json
-CACHE_TTL=300
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+# Edit secrets.toml with your Google Sheet URL
 ```
-
-**Finding your Spreadsheet ID:**
-From the Google Sheets URL: `https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit`
 
 ### 5. Run the Dashboard
 
@@ -102,43 +86,66 @@ From the Google Sheets URL: `https://docs.google.com/spreadsheets/d/{SPREADSHEET
 streamlit run src/location_not_found/dashboard.py
 ```
 
-The dashboard will open in your browser at `http://localhost:8501`
+The dashboard will open in your browser at `http://localhost:8501` 🚀
 
 ## Data Schema
 
 ### Required Columns
 
-Your Google Sheet must have these columns (case-insensitive):
+Your Google Sheet must have these three columns (case-insensitive):
 
 - **player** (string): Player name
-- **date** (string/date): Game date in format YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY
+- **date** (string/date): Game date
 - **score** (number): Score between 0 and 25,000
+
+### Supported Date Formats
+
+- `YYYY-MM-DD` (e.g., 2024-01-15)
+- `DD/MM/YYYY` (e.g., 15/01/2024)
+- `MM/DD/YYYY` (e.g., 01/15/2024)
+- `DD-MM-YYYY` (e.g., 15-01-2024)
 
 ### Data Validation
 
 The dashboard uses Pydantic for robust data validation:
-
 - Player names are automatically normalized (title case, trimmed whitespace)
-- Dates are parsed from multiple formats
+- Dates are parsed from multiple formats automatically
 - Scores must be between 0 and 25,000
-- Invalid rows are logged with helpful error messages
+- Invalid rows are logged with helpful error messages (shown in the UI)
 
 ## Architecture
 
-### Components
+### Project Structure
 
 ```
 src/location_not_found/
 ├── models.py          # Pydantic models for data validation
-├── data_loader.py     # Google Sheets integration with caching
+├── data_loader.py     # Google Sheets integration with st.connection
 ├── analytics.py       # Statistics and data analysis
 └── dashboard.py       # Streamlit UI and visualizations
+
+examples/
+├── sample_data.csv    # Sample dataset for testing
+└── usage_example.py   # Programmatic usage example
+
+.streamlit/
+└── secrets.toml.example  # Configuration template
+
+DASHBOARD.md           # This guide
 ```
 
-### Key Design Patterns
+### Key Technologies
 
-- **Type Safety**: Full type hints with Pydantic models
-- **Data Validation**: Automatic validation with helpful error messages
+- **Streamlit**: Web framework and UI
+- **st-gsheets-connection**: Official Google Sheets connector
+- **Pydantic**: Data validation with type safety
+- **Pandas**: Data manipulation and analysis
+- **Plotly**: Interactive visualizations
+
+### Design Patterns
+
+- **Type Safety**: Full type hints throughout the codebase
+- **Data Validation**: Automatic validation with Pydantic models
 - **Caching**: Streamlit's `@st.cache_data` for performance
 - **Separation of Concerns**: Clean separation between data, logic, and UI
 - **Error Handling**: Graceful error handling with user-friendly messages
@@ -166,48 +173,101 @@ Filter all statistics and visualizations by custom date ranges through the sideb
 
 ### Perfect Games Tracking
 
-Automatically identifies and counts perfect 25,000 point scores.
+Automatically identifies and counts perfect 25,000 point scores with ⭐ indicator.
 
 ## Deployment
 
-### Streamlit Cloud
+### Streamlit Cloud (Recommended)
 
-1. Push your code to GitHub
+1. Push your code to GitHub (without `secrets.toml`)
 2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Create a new app
-4. Add secrets in app settings (same format as `secrets.toml`)
+3. Create a new app pointing to your repository
+4. In app settings, add your secrets:
+
+```toml
+[connections.gsheets]
+spreadsheet = "https://docs.google.com/spreadsheets/d/YOUR_ID/edit#gid=0"
+type = "gsheets"
+```
+
 5. Deploy!
 
-**Important**: Don't commit `credentials.json` or `secrets.toml` to version control!
+**Important**: Never commit `secrets.toml` to version control!
 
 ### Docker
 
-A Dockerfile is provided for containerized deployment:
-
 ```bash
 docker build -t location-not-found .
-docker run -p 8501:8501 -v $(pwd)/credentials.json:/app/credentials.json location-not-found
+docker run -p 8501:8501 \
+  -e STREAMLIT_SECRETS='[connections.gsheets]
+spreadsheet="YOUR_SHEET_URL"
+type="gsheets"' \
+  location-not-found
+```
+
+## Configuration Options
+
+### Cache Settings
+
+Adjust cache TTL in `secrets.toml`:
+
+```toml
+[gsheets]
+ttl = 600  # Cache for 10 minutes
+```
+
+Set to `0` to disable caching (not recommended for production).
+
+### Worksheet Selection
+
+If your data is in a different tab/worksheet:
+
+```toml
+[gsheets]
+worksheet = "GameScores"  # Change from default "Sheet1"
 ```
 
 ## Troubleshooting
 
-### "Spreadsheet not found"
-- Verify the spreadsheet ID is correct
-- Ensure the service account has access to the sheet
+### "Failed to load data from Google Sheets"
 
-### "Credentials file not found"
-- Check that `credentials.json` exists in the specified path
-- Verify the path in your configuration
+**Solutions:**
+- Verify your Google Sheet has link sharing enabled ("Anyone with the link")
+- Check that the URL in `secrets.toml` is correct
+- Ensure your sheet has the required columns: `player`, `date`, `score`
+- Try refreshing the dashboard with the 🔄 button in the sidebar
 
-### "No data found"
-- Ensure your sheet has the required columns: player, date, score
-- Check that column names match (case-insensitive)
+### "No data found in spreadsheet"
+
+**Solutions:**
 - Verify there's data below the header row
+- Check column names match: `player`, `date`, `score` (case-insensitive)
+- Ensure the worksheet name in config matches your sheet
 
 ### Data validation errors
-- Check date format matches one of: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY
+
+**Solutions:**
+- Check date format matches one of the supported formats
 - Ensure scores are numbers between 0 and 25,000
 - Verify player names are not empty
+- Look at the warning messages in the UI for specific row errors
+
+### Connection timeout or quota exceeded
+
+**Solutions:**
+- Google Sheets API has usage limits
+- Increase cache TTL to reduce API calls
+- Consider copying data to a separate sheet if the source is very large
+
+## Sample Data
+
+Use the included `examples/sample_data.csv` to test the dashboard:
+
+1. Create a new Google Sheet
+2. Copy the sample data into it
+3. Enable link sharing
+4. Update your `secrets.toml` with the sheet URL
+5. Run the dashboard!
 
 ## Development
 
@@ -220,13 +280,10 @@ The project follows high Python standards:
 uv run ruff format .
 
 # Lint code
-uv run ruff check .
+uv run ruff check . --fix
 
 # Run tests
 uv run pytest
-
-# Type checking (if using mypy)
-mypy src/
 ```
 
 ### Adding New Features
@@ -235,33 +292,49 @@ mypy src/
 2. **Analytics**: Extend `ScoreAnalyzer` in `analytics.py`
 3. **Visualizations**: Add new display functions in `dashboard.py`
 
-Example - Adding a new metric:
+Example - Adding win streaks:
 
 ```python
 # In analytics.py
-def get_consistency_score(self, player: str) -> float:
-    """Calculate player consistency (lower std dev = more consistent)."""
-    player_df = self.df[self.df["player"] == player]
-    return float(player_df["score"].std())
+def get_win_streaks(self, player: str) -> int:
+    """Calculate longest win streak for a player."""
+    # Implementation
 
 # In dashboard.py
-def display_consistency_chart(analyzer: ScoreAnalyzer, df: pd.DataFrame):
-    """Display player consistency rankings."""
-    # Implementation here
+def display_win_streaks(analyzer: ScoreAnalyzer):
+    """Display win streak statistics."""
+    # Implementation
 ```
 
 ## Performance
 
-- **Caching**: Data is cached for 5 minutes by default (configurable via `cache_ttl`)
+- **Caching**: Data is cached for 5 minutes by default (configurable)
 - **Lazy Loading**: Data is only fetched when needed
 - **Efficient Queries**: Uses pandas for fast data manipulation
+- **Connection Pooling**: Streamlit connections handle connection reuse
 
 ## Security
 
-- Never commit credentials files
-- Use environment-specific secrets management
-- Restrict service account permissions to minimum required
-- Regularly rotate service account keys
+- **No Credentials Needed**: Uses public link sharing (simpler and safer)
+- **Read-only Access**: Dashboard only reads data, never writes
+- **Secrets Management**: Streamlit secrets are never exposed in code
+- **Link Sharing**: While convenient, anyone with the link can view data
+  - For private data, consider using service account authentication
+
+## Why This Approach?
+
+**Advantages of Public Sheet + Link Sharing:**
+- ✅ No complex service account setup
+- ✅ No credential files to manage
+- ✅ Works with personal Google accounts
+- ✅ Easy to update and maintain
+- ✅ Perfect for team dashboards
+
+**When to Use Service Accounts Instead:**
+- Highly sensitive data
+- Need write access
+- Enterprise security requirements
+- Automated data pipelines
 
 ## Contributing
 
@@ -276,3 +349,11 @@ See [LICENSE](LICENSE) for details.
 For issues and questions:
 - GitHub Issues: [location-not-found/issues](https://github.com/iamlucasvieira/location-not-found/issues)
 - Documentation: [location-not-found docs](https://iamlucasvieira.github.io/location-not-found/)
+
+## Acknowledgments
+
+Built with ❤️ using:
+- [Streamlit](https://streamlit.io/)
+- [Streamlit GSheetsConnection](https://github.com/streamlit/gsheets-connection)
+- [Pydantic](https://docs.pydantic.dev/)
+- [Plotly](https://plotly.com/)

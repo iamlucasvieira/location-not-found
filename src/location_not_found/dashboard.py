@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from location_not_found.analytics import ScoreAnalyzer
-from location_not_found.data_loader import DataLoadError, GoogleSheetsLoader, load_config_from_env
+from location_not_found.data_loader import DataLoadError, GoogleSheetsLoader, load_config_from_secrets
 
 
 def configure_page() -> None:
@@ -39,8 +39,9 @@ def display_error(error: Exception) -> None:
         """
         **Setup Instructions:**
         1. Ensure your Google Sheets has columns: `player`, `date`, `score`
-        2. Configure `credentials.json` with your service account
-        3. Set up `.streamlit/secrets.toml` with your spreadsheet ID
+        2. Enable link sharing on your Google Sheet (Anyone with the link can view)
+        3. Set up `.streamlit/secrets.toml` with your connection configuration
+        4. See [DASHBOARD.md](DASHBOARD.md) for detailed setup guide
         """
     )
 
@@ -338,8 +339,8 @@ def main() -> None:
     display_header()
 
     try:
-        # Load configuration
-        config = load_config_from_env()
+        # Load configuration (optional - falls back to Streamlit secrets)
+        config = load_config_from_secrets()
 
         # Initialize loader and load data
         loader = GoogleSheetsLoader(config)

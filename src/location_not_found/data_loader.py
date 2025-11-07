@@ -1,16 +1,11 @@
-"""Google Sheets data loader with caching functionality."""
+"""Google Sheets data loader using Streamlit's connection interface."""
 
 import logging
-import os
-from pathlib import Path
-from typing import ClassVar, NoReturn
 
-import gspread
 import pandas as pd
 import streamlit as st
-from dotenv import load_dotenv
-from google.oauth2.service_account import Credentials
 from pydantic import ValidationError
+from streamlit_gsheets import GSheetsConnection
 
 from location_not_found.models import DashboardConfig, GameScore
 
@@ -22,57 +17,22 @@ class DataLoadError(Exception):
 
 
 class GoogleSheetsLoader:
-    """Loader for Google Sheets data with caching and validation."""
+    """Loader for Google Sheets data using Streamlit's connection interface."""
 
-    SCOPES: ClassVar[list[str]] = [
-        "https://www.googleapis.com/auth/spreadsheets.readonly",
-        "https://www.googleapis.com/auth/drive.readonly",
-    ]
-
-    def __init__(self, config: DashboardConfig) -> None:
+    def __init__(self, config: DashboardConfig | None = None) -> None:
         """Initialize the Google Sheets loader.
 
         Args:
-            config: Dashboard configuration containing credentials and sheet info
+            config: Optional dashboard configuration. If not provided, uses Streamlit secrets.
         """
         self.config = config
-        self._client: gspread.Client | None = None
-
-    @property
-    def client(self) -> gspread.Client:
-        """Get or create the gspread client."""
-        if self._client is None:
-            try:
-                credentials = self._load_credentials()
-                self._client = gspread.authorize(credentials)
-            except Exception as e:
-                msg = f"Failed to authenticate with Google Sheets: {e}"
-                raise DataLoadError(msg) from e
-        return self._client
-
-    def _load_credentials(self) -> Credentials:
-        """Load Google service account credentials.
-
-        Returns:
-            Service account credentials
-
-        Raises:
-            DataLoadError: If credentials file is not found or invalid
-        """
-        creds_path = Path(self.config.credentials_path)
-        if not creds_path.exists():
-            msg = f"Credentials file not found: {creds_path}"
-            raise DataLoadError(msg)
-
-        try:
-            return Credentials.from_service_account_file(str(creds_path), scopes=self.SCOPES)
-        except Exception as e:
-            msg = f"Failed to load credentials from {creds_path}: {e}"
-            raise DataLoadError(msg) from e
 
     @st.cache_data(ttl=300, show_spinner="Loading data from Google Sheets...")
-    def load_data(_self) -> list[GameScore]:
+    def load_data(_self, worksheet: str | None = None) -> list[GameScore]:
         """Load and validate data from Google Sheets.
+
+        Args:
+            worksheet: Optional worksheet name to override config
 
         Returns:
             List of validated GameScore objects
@@ -81,14 +41,22 @@ class GoogleSheetsLoader:
             DataLoadError: If data loading or validation fails
         """
         try:
-            # Open spreadsheet and worksheet
-            spreadsheet = _self.client.open_by_key(_self.config.spreadsheet_id)
-            worksheet = spreadsheet.worksheet(_self.config.sheet_name)
+            # Create connection
+            conn = st.connection("gsheets", type=GSheetsConnection)
 
-            # Get all records as dictionaries
-            records = worksheet.get_all_records()
+            # Determine which worksheet to read
+            sheet_name = worksheet
+            if sheet_name is None and _self.config:
+                sheet_name = _self.config.worksheet
 
-            if not records:
+            # Read data from Google Sheets
+            # If config specifies a spreadsheet, use it; otherwise use default from secrets
+            if _self.config and _self.config.spreadsheet:
+                df = conn.read(spreadsheet=_self.config.spreadsheet, worksheet=sheet_name, ttl=_self.config.cache_ttl)
+            else:
+                df = conn.read(worksheet=sheet_name, ttl=300)
+
+            if df.empty:
                 logger.warning("No data found in spreadsheet")
                 return []
 
@@ -96,45 +64,40 @@ class GoogleSheetsLoader:
             validated_scores: list[GameScore] = []
             errors: list[tuple[int, str]] = []
 
-            for idx, record in enumerate(records, start=2):  # Start at 2 (header is row 1)
+            for idx, row in df.iterrows():
                 try:
                     # Normalize column names (case-insensitive)
-                    normalized_record = {k.lower().strip(): v for k, v in record.items()}
+                    row_dict = {k.lower().strip(): v for k, v in row.to_dict().items()}
 
                     # Map to expected field names
                     game_data = {
-                        "player": normalized_record.get("player", ""),
-                        "date": normalized_record.get("date", ""),
-                        "score": normalized_record.get("score", 0),
+                        "player": row_dict.get("player", ""),
+                        "date": row_dict.get("date", ""),
+                        "score": row_dict.get("score", 0),
                     }
 
                     score = GameScore(**game_data)
                     validated_scores.append(score)
                 except ValidationError as e:
                     error_msg = _self._format_validation_error(e)
-                    errors.append((idx, error_msg))
-                    logger.warning(f"Row {idx} validation failed: {error_msg}")
+                    errors.append((idx + 2, error_msg))  # +2 because pandas is 0-indexed and row 1 is header
+                    logger.warning(f"Row {idx + 2} validation failed: {error_msg}")
                 except Exception as e:
-                    errors.append((idx, str(e)))
-                    logger.warning(f"Row {idx} processing failed: {e}")
+                    errors.append((idx + 2, str(e)))
+                    logger.warning(f"Row {idx + 2} processing failed: {e}")
 
             # Log summary
             logger.info(f"Loaded {len(validated_scores)} valid records, {len(errors)} errors")
 
-            if errors and len(errors) < 10:  # Only show errors if not too many
+            # Show errors to user if not too many
+            if errors and len(errors) < 10:
                 for row_num, error in errors:
                     st.warning(f"Row {row_num}: {error}")
 
             return validated_scores  # noqa: TRY300
 
-        except gspread.SpreadsheetNotFound:
-            msg = f"Spreadsheet not found: {_self.config.spreadsheet_id}"
-            raise DataLoadError(msg) from None
-        except gspread.WorksheetNotFound:
-            msg = f"Worksheet '{_self.config.sheet_name}' not found"
-            raise DataLoadError(msg) from None
         except Exception as e:
-            msg = f"Failed to load data: {e}"
+            msg = f"Failed to load data from Google Sheets: {e}"
             raise DataLoadError(msg) from e
 
     @staticmethod
@@ -172,25 +135,26 @@ class GoogleSheetsLoader:
         return df.sort_values("date", ascending=False).reset_index(drop=True)
 
 
-def load_config_from_env() -> DashboardConfig:
-    """Load dashboard configuration from Streamlit secrets or environment.
+def load_config_from_secrets() -> DashboardConfig | None:
+    """Load dashboard configuration from Streamlit secrets.
 
     Returns:
-        Dashboard configuration
+        Dashboard configuration or None if not configured
 
     Raises:
-        DataLoadError: If required configuration is missing
+        DataLoadError: If configuration is invalid
     """
     try:
-        # Try to load from Streamlit secrets first
+        # Check if gsheets config exists in secrets
         if "gsheets" in st.secrets:
+            gsheets_config = st.secrets["gsheets"]
             return DashboardConfig(
-                spreadsheet_id=st.secrets["gsheets"]["spreadsheet_id"],
-                sheet_name=st.secrets["gsheets"].get("sheet_name", "Sheet1"),
-                credentials_path=st.secrets["gsheets"].get("credentials_path", "credentials.json"),
-                cache_ttl=st.secrets["gsheets"].get("cache_ttl", 300),
+                spreadsheet=gsheets_config.get("spreadsheet", ""),
+                worksheet=gsheets_config.get("worksheet", "Sheet1"),
+                cache_ttl=gsheets_config.get("ttl", 300),
             )
 
+<<<<<<< HEAD
         # Fallback to environment variables
         load_dotenv()
 
@@ -209,6 +173,11 @@ def load_config_from_env() -> DashboardConfig:
             credentials_path=os.getenv("CREDENTIALS_PATH", "credentials.json"),
             cache_ttl=int(os.getenv("CACHE_TTL", "300")),
         )
+=======
+        # If no specific config, return None and let st.connection use default from secrets
+        return None
+
+>>>>>>> c44de4d (Simplify Google Sheets integration using st.connection)
     except Exception as e:
-        msg = f"Failed to load configuration: {e}"
+        msg = f"Failed to load configuration from secrets: {e}"
         raise DataLoadError(msg) from e
