@@ -1,6 +1,7 @@
 """Google Sheets data loader using Streamlit's connection interface."""
 
 import logging
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -55,51 +56,51 @@ class GoogleSheetsLoader:
                 df = conn.read(spreadsheet=_self.config.spreadsheet, worksheet=sheet_name, ttl=_self.config.cache_ttl)
             else:
                 df = conn.read(worksheet=sheet_name, ttl=300)
-
-            if df.empty:
-                logger.warning("No data found in spreadsheet")
-                return []
-
-            # Validate and convert to GameScore objects
-            validated_scores: list[GameScore] = []
-            errors: list[tuple[int, str]] = []
-
-            for idx, row in df.iterrows():
-                try:
-                    # Normalize column names (case-insensitive)
-                    row_dict = {k.lower().strip(): v for k, v in row.to_dict().items()}
-
-                    # Map to expected field names
-                    # Note: Sheet uses "date" but we convert to "game_date" internally
-                    game_data = {
-                        "player": row_dict.get("player", ""),
-                        "game_date": row_dict.get("date", "") or row_dict.get("game_date", ""),
-                        "score": row_dict.get("score", 0),
-                    }
-
-                    score = GameScore(**game_data)
-                    validated_scores.append(score)
-                except ValidationError as e:
-                    error_msg = _self._format_validation_error(e)
-                    errors.append((idx + 2, error_msg))  # +2 because pandas is 0-indexed and row 1 is header
-                    logger.warning(f"Row {idx + 2} validation failed: {error_msg}")
-                except Exception as e:
-                    errors.append((idx + 2, str(e)))
-                    logger.warning(f"Row {idx + 2} processing failed: {e}")
-
-            # Log summary
-            logger.info(f"Loaded {len(validated_scores)} valid records, {len(errors)} errors")
-
-            # Show errors to user if not too many
-            if errors and len(errors) < 10:
-                for row_num, error in errors:
-                    st.warning(f"Row {row_num}: {error}")
-
-            return validated_scores  # noqa: TRY300
-
         except Exception as e:
-            msg = f"Failed to load data from Google Sheets: {e}"
-            raise DataLoadError(msg) from e
+            logger.warning(f"Failed to load data from Google Sheets: {e}, using example data instead")
+            example_path = Path(__file__).parents[2] / "examples" / "sample_data.csv"
+            df = pd.read_csv(example_path)
+
+        if df.empty:
+            logger.warning("No data found in spreadsheet")
+            return []
+
+        # Validate and convert to GameScore objects
+        validated_scores: list[GameScore] = []
+        errors: list[tuple[int, str]] = []
+
+        for idx, row in df.iterrows():
+            try:
+                # Normalize column names (case-insensitive)
+                row_dict = {k.lower().strip(): v for k, v in row.to_dict().items()}
+
+                # Map to expected field names
+                # Note: Sheet uses "date" but we convert to "game_date" internally
+                game_data = {
+                    "player": row_dict.get("player", ""),
+                    "game_date": row_dict.get("date", "") or row_dict.get("game_date", ""),
+                    "score": row_dict.get("score", 0),
+                }
+
+                score = GameScore(**game_data)
+                validated_scores.append(score)
+            except ValidationError as e:
+                error_msg = _self._format_validation_error(e)
+                errors.append((idx + 2, error_msg))  # +2 because pandas is 0-indexed and row 1 is header
+                logger.warning(f"Row {idx + 2} validation failed: {error_msg}")
+            except Exception as e:
+                errors.append((idx + 2, str(e)))
+                logger.warning(f"Row {idx + 2} processing failed: {e}")
+
+        # Log summary
+        logger.info(f"Loaded {len(validated_scores)} valid records, {len(errors)} errors")
+
+        # Show errors to user if not too many
+        if errors and len(errors) < 10:
+            for row_num, error in errors:
+                st.warning(f"Row {row_num}: {error}")
+
+        return validated_scores
 
     @staticmethod
     def _format_validation_error(error: ValidationError) -> str:
